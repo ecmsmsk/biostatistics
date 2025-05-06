@@ -1,0 +1,133 @@
+---
+title: "project"
+author: "Ecem Simsek"
+date: "2024-10-03"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Step 1: Load Required Libraries
+```{r}
+# Load required libraries
+library(tidyverse)
+library(car)
+library(ResourceSelection)
+
+# Read the dataset
+santa <- read.csv("santa.csv")
+```
+
+Step 2: Clean the Data
+You will need to clean the data, removing or handling missing values and ensuring that the variables are in the correct format.
+
+```{r}
+# Clean the dataset by removing missing values for key variables
+santa_clean <- santa %>%
+  filter(ses != 99999.99) %>%  # Remove missing income data
+  drop_na(HCGI1, areacat, X28fecal, ecoli, enter, totalc, sex, Agenew, tourist, ses)
+```
+
+Step 3: Summary Statistics
+Perform basic summary statistics to understand the distribution of the key variables.
+
+```{r}
+# Summary statistics for the covariates
+summary(santa_clean)
+
+# Summary statistics for exposure variables
+santa_clean %>%
+  summarise(mean_X28fecal = mean(X28fecal, na.rm = TRUE),
+            sd_X28fecal = sd(X28fecal, na.rm = TRUE),
+            mean_ecoli = mean(ecoli, na.rm = TRUE),
+            sd_ecoli = sd(ecoli, na.rm = TRUE),
+            mean_enter = mean(enter, na.rm = TRUE),
+            sd_enter = sd(enter, na.rm = TRUE),
+            mean_totalc = mean(totalc, na.rm = TRUE),
+            sd_totalc = sd(totalc, na.rm = TRUE))
+
+# Summary statistics for outcome variables
+santa_clean %>%
+  summarise(
+    mean_QG = mean(QG, na.rm = TRUE),
+    sd_QG = sd(QG, na.rm = TRUE),
+    prop_HCGI1 = mean(HCGI1, na.rm = TRUE),
+    prop_SigResD = mean(SigResD, na.rm = TRUE)
+  )
+
+```
+
+Step 4: Linear Regression Model for QG (Gastrointestinal Score)
+This model will examine how the exposure variables (fecal coliform, E. coli, enterococcus, total coliform) relate to the QG score.
+
+```{r}
+# Load necessary library for Ridge regression
+library(glmnet)
+
+# Prepare the data for ridge regression (convert to matrix)
+X <- model.matrix(QG ~ areacat + X28fecal + ecoli + enter + totalc + sex + Agenew + tourist + ses, data = santa_clean)[, -1]
+y <- santa_clean$QG
+
+# Fit a Ridge regression model (alpha = 0 for Ridge)
+ridge_model <- glmnet(X, y, alpha = 0)
+
+# Cross-validate to find the best lambda
+cv_ridge <- cv.glmnet(X, y, alpha = 0)
+
+# Best lambda value
+best_lambda <- cv_ridge$lambda.min
+
+# Fit the final Ridge regression model
+ridge_final_model <- glmnet(X, y, alpha = 0, lambda = best_lambda)
+
+# Coefficients of the final model
+coef(ridge_final_model)
+
+```
+
+Step 5: Logistic Regression Model for HCGI1
+This model will examine the relationship between the environmental exposures and the binary outcome HCGI1 (gastrointestinal illness).
+
+```{r}
+# Logistic regression model for HCGI1
+model_hcgi1 <- glm(HCGI1 ~ areacat + X28fecal + ecoli + enter + totalc +
+                   sex + Agenew + tourist + ses, family = binomial, data = santa_clean)
+
+# Summary of the logistic regression model
+summary(model_hcgi1)
+
+# Calculate Odds Ratios with 95% Confidence Intervals
+exp(cbind(Odds_Ratio = coef(model_hcgi1), confint(model_hcgi1)))
+
+# Hosmer-Lemeshow Test for goodness-of-fit
+hoslem.test(santa_clean$HCGI1, fitted(model_hcgi1))
+```
+
+Step 6: Calculate Risk Difference, Risk Ratio, and Odds Ratio
+Finally, calculate the risk difference (RD), risk ratio (RR), and odds ratio (OR) for HCGI1 by comparing different exposure groups.
+
+```{r}
+# Create a 2x2 table for HCGI1 and areacat (distance from drain)
+table_hcgi1 <- table(santa_clean$HCGI1, santa_clean$areacat)
+
+# Calculate Risk Difference (RD)
+risk_exposed <- table_hcgi1[1, 2] / (table_hcgi1[1, 1] + table_hcgi1[1, 2])
+risk_unexposed <- table_hcgi1[2, 2] / (table_hcgi1[2, 1] + table_hcgi1[2, 2])
+rd <- risk_exposed - risk_unexposed
+cat("Risk Difference (RD):", rd, "\n")
+
+# Calculate Risk Ratio (RR)
+rr <- risk_exposed / risk_unexposed
+cat("Risk Ratio (RR):", rr, "\n")
+
+# Calculate Odds Ratio (OR)
+or <- (table_hcgi1[1, 1] * table_hcgi1[2, 2]) / (table_hcgi1[1, 2] * table_hcgi1[2, 1])
+cat("Odds Ratio (OR):", or, "\n")
+```
+
+Step 7: Conclusion
+This analysis provides insights into the relationship between environmental exposures from storm drains and health outcomes such as gastrointestinal and respiratory diseases. The combination of linear and logistic regression models allows for a detailed examination of both continuous and binary outcomes.

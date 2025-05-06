@@ -1,0 +1,118 @@
+---
+title: "Problem Set 6"
+author: "Ecem Simsek"
+date: "2024-10-10"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**2. Install the `aplore3` package and explore the icu data set. The code book is on pg. 24. Note, the `aplore3` package contains all the data sets from 'Applied Logistic Regression', which is a rich source of practice data.**
+
+```{r}
+library(aplore3)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(pander)
+
+data(icu)
+head(icu)
+str(icu)
+```
+
+
+**3. Create a scatter plot of mortality status at discharge `sta` versus \`age'. Include a descriptive title, descriptive axis labels. Add color to differentiate mortality status and add a key.**
+
+```{r}
+ggplot(icu, aes(x = age, y = sta, color = as.factor(sta))) +
+  geom_point() +
+  labs(title = "Scatter Plot of Mortality Status vs Age",
+       x = "Age",
+       y = "Mortality Status (0 = Lived, 1 = Died)",
+       color = "Mortality Status") +
+  theme_minimal()
+```
+
+**4. Create a numeric binary variable for `sta` where Died = 1 and Lived = 0 and save it back into the `icu` data set.**
+
+```{r}
+icu <- icu %>%
+  mutate(sta_binary = ifelse(sta == "Died", 1, 0))
+
+```
+
+**5. Create a numeric age group variable with the intervals: "15-24","25-34","35-44","45-54","55-64","65-74","75-84","85-94".**
+
+```{r}
+icu <- icu %>%
+  mutate(age_group_numeric = cut(age, breaks = c(15, 24, 34, 44, 54, 64, 74, 84, 94), right = FALSE))
+
+```
+
+
+**6. From the numeric age group variable you just created, create a string variable that has the corresponding categories: "15-24","25-34","35-44","45-54","55-64","65-74","75-84","85-94".**
+```{r}
+icu <- icu %>%
+  mutate(age_group_str = cut(age, 
+                             breaks = c(15, 24, 34, 44, 54, 64, 74, 84, 94),
+                             labels = c("15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85-94"),
+                             right = FALSE))
+```
+
+
+**7. From the age groups variable you created, create a numeric variable that represents the age midpoint for each category. Create in a single statement. Hint: use `group_by` with `summarise`.**
+```{r}
+midpoints_table <- icu %>%
+  group_by(age_group_str) %>%
+  summarise(age_midpoint = mean(as.numeric(case_when(
+    age_group_str == "15-24" ~ 19.5,
+    age_group_str == "25-34" ~ 29.5,
+    age_group_str == "35-44" ~ 39.5,
+    age_group_str == "45-54" ~ 49.5,
+    age_group_str == "55-64" ~ 59.5,
+    age_group_str == "65-74" ~ 69.5,
+    age_group_str == "75-84" ~ 79.5,
+    age_group_str == "85-94" ~ 89.5
+  ))))
+
+```
+
+
+**8. Create a summary table that has the proportions of patients by mortality status by age group category. Show the table using `pander`.**
+```{r}
+icu_summary <- icu %>%
+  group_by(age_group_str, sta_binary) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  mutate(proportion = count / sum(count))
+
+pander(icu_summary)
+```
+
+***9. Create a data table with the mean mortality status over patients within each age group category. Show the Show the table using `pander`.**
+```{r}
+mean_mortality_table <- icu %>%
+  group_by(age_group_str) %>%
+  summarise(mean_mortality = mean(sta_binary)) %>%
+  left_join(midpoints_table, by = "age_group_str")
+
+pander(mean_mortality_table)
+```
+
+**10. Plot the mean mortality status versus the midpoint of the age intervals. Include a descriptive title, descriptive axis labels.**
+```{r}
+ggplot(mean_mortality_table, aes(x = age_midpoint, y = mean_mortality)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean Mortality Status vs Age Midpoint",
+       x = "Age Midpoint",
+       y = "Mean Mortality Status") +
+  theme_minimal()
+```
+
+
+Submit your assignment on Blackboard as a PDF or MS Word file of your output and responses. I don’t need your .R, .Rmd or .ipynb file unless explicitly asked for. Put your name on your work. No zip files.

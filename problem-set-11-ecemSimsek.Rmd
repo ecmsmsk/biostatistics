@@ -1,0 +1,101 @@
+---
+title: "Problem Set 11"
+author: "Ecem Simsek"
+date: "2024-11-21"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(survival)
+library(survminer)
+
+data(lung)
+
+head(lung)
+summary(lung)
+```
+
+*1. Perform a log-rank test to compare the survival distributions between males and females in the `lung` dataset from the `survival` package.*
+
+*Use the `survdiff` function to test the null hypothesis that there is no difference in survival between males and females.*
+*Display the test result and interpret the chi-square statistic and p-value.*
+*Based on the p-value, state whether you would reject the null hypothesis at a 5% significance level.*
+
+*Hint: The sex variable in the lung dataset is coded as 1 = male and 2 = female.*
+
+```{r}
+log_rank_test <- survdiff(Surv(time, status) ~ sex, data= lung)
+
+log_rank_test
+
+p_value <- 1 - pchisq(log_rank_test$chisq, df = length(log_rank_test$n) - 1)
+
+cat("Chi-square statistic: ", log_rank_test$chisq, "\n")
+cat("p-value: ", p_value, "\n")
+
+if (p_value < 0.05) {
+  cat("Reject the null hypothesis: There is a significant difference in survival between males and females.\n")
+} else {
+  cat("Fail to reject the null hypothesis: No significant difference in survival between males and females.\n")
+}
+```
+
+*2. Age could be an important factor influencing survival. Stratify the log-rank test by age groups (under 60 and 60+ years) and compare survival between males and females within each age group.*
+
+
+*Create a new categorical variable, ageGroup, with two levels: "Under 60" and "60+."*
+*Perform a stratified log-rank test using survdiff, adjusting for ageGroup and comparing survival between males and females.*
+*Interpret the results, particularly the p-value, and discuss whether adjusting for age made a difference in the comparison of survival between sexes*.
+
+```{r}
+lung$ageGroup <- ifelse(lung$age < 60, "Under 60", "60+")
+
+stratified_test <- survdiff(Surv(time, status) ~ sex + strata(ageGroup), data = lung)
+
+stratified_test
+
+strat_p_value <- 1 - pchisq(stratified_test$chisq, df = length(stratified_test$n) - 1)
+
+cat("Stratified Chi-square statistic:", stratified_test$chisq, "\n")
+cat("Stratified P-value:", strat_p_value, "\n")
+
+if (strat_p_value < 0.05) {
+  cat("Reject the null hypothesis: After adjusting for age, there is a significant difference in survival between males and females.\n")
+} else {
+  cat("Fail to reject the null hypothesis: After adjusting for age, no significant difference between males and females.\n")
+}
+```
+
+*3. Generate Kaplan-Meier survival curves for males and females in the lung dataset, stratified by age group.*
+
+*Use the `survfit` function to fit Kaplan-Meier survival curves for each combination of sex and ageGroup.*
+*Plot the survival curves, coloring by sex and faceting by ageGroup.*
+*Add a legend and label the axes appropriately.*
+
+*Hint: Use the `ggsurvplot` function from the `survminer` package to make faceted plots.*
+
+```{r}
+lung$ageGroup <- ifelse(lung$age < 60, "Under 60", "60+")
+
+km_fit <- survfit(Surv(time, status) ~ sex + ageGroup, data = lung)
+
+ggsurvplot(
+  km_fit,
+  data = lung,
+  facet.by = "ageGroup",         
+  pval = TRUE,                  # Show p-value on the plots
+  conf.int = TRUE,              # Include confidence intervals
+  legend.title = "Sex",         # Add a legend title
+  legend.labs = c("Male", "Female"), # Labels for the legend
+  xlab = "Time (days)",         
+  ylab = "Survival Probability",
+  title = "Kaplan-Meier Survival Curves by Sex and Age Group", 
+  palette = c("#FFD700", "#FF0000") # 
+)
+```

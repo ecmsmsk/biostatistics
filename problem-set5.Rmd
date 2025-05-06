@@ -1,0 +1,154 @@
+---
+title: "Problem Set 5"
+author: "Ecem Simsek"
+date: "2024-09-26"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+chol <- read.csv("chol.csv")
+head(chol)
+str(chol)
+```
+
+**1.Create a scatter plot of HDL versus SEX. Describe your visual impressions.**
+
+```{r}
+ggplot(chol, aes(x = sex, y = hdl)) +
+geom_point() +
+geom_smooth(method = "lm", se = FALSE) +
+ggtitle("Scatterplot of HDL versus SEX") +
+xlab("0 = Male, 1 = Female") +
+ylab("FEV (ml)") +
+theme(plot.title = element_text(hjust = 0.5))
+```
+
+**2. Is there an association between HDL and SEX? State your hypothesis and interpret the slope estimate in terms of the difference in Y for females compared to males.**
+```{r}
+#sex to numeric
+chol$sex_numeric <- ifelse(chol$sex == "M", 1, 2)
+
+model= lm(hdl ~ sex_numeric, data=chol)
+#linear model
+summary(model)
+```
+
+Null Hypothesis (Ho):no difference in HDL levels between males and females. slope =0
+Alternative Hypothesis (H1): difference in HDL levels between males and females. slope != 0
+
+p-value is 0.000896. it has significantly differences. We reject null hypothesis.
+
+coefficients value is 5.442. So, females is higher than males.
+
+There is an association between hdl and sex.
+
+**3. Does your model in (2) satisfy the assumptions of linear regression? Why or why not?**
+```{r}
+plot(model)
+```
+
+
+Linearity (Residuals vs Fitted plot): linearity assumption is satisfied.
+Normality (Q - Q plot): slightly violation
+homoscedasticity (scale location): satisfied
+
+**4. Fit a model with Y = log(HDL) and three X-variables: BMI, AGE, and HT. (Make sure write down the equation of your model.)**
+```{r}
+model1<- lm(log(hdl) ~ bmi + age + ht, data = chol)
+summary(model1)
+```
+
+Log (HDL)= 3.9038 - 0.083911.BMI + 0.001996.AGE + 0.002755.HT
+
+Intercept is 3.9038. 
+BMI is -0.083911. 
+age is 0.001996.
+ht is 0.002755
+
+Residual standard error: 0.2328
+R-squared:  0.04027
+F-statistic: 2.602 ; p-value: 0.05343
+
+BMI is significant predictor in model and it is negative value. So, it has inverse ratio association between BMI and hdl.
+age and ht is not significant predictors.
+
+**5. What is the predicted HDL for a BMI = 3, height = 61, and age = 28? Use your model from (4). Make sure to report in terms of HDL, not log(HDL) and provide the 95% confidence intervals.**
+```{r}
+new_data <- data.frame(bmi = 3, age = 28, ht = 61)
+predict_log <- predict(model1, newdata = new_data, interval = "confidence", level = 0.95)
+predicted_hdl <- exp(predict_log)
+predicted_hdl 
+```
+
+predicted hdl is 48.23126.
+HDL is likely between 46.40 and 50.13 for 95% confidence interval.
+
+**6. Does the model in (4) satisfy the 5 assumptions of multiple linear regression? Why or why not?**
+```{r}
+plot(model1)
+library(car)
+vif(model1)
+```
+
+Linearity: Satisfied.
+Normality: mostly satisfied with minor deviations at the tails.
+Homoscedasticity: Slight violation
+Independence: satisfied
+Multicollinearity: satisfied
+
+**7. Fit the model with Y=log(HDL) and four X-variables: BMI, AGE, SEX, and HT. (Make sure write down the equation of your model.)**
+```{r}
+chol$sex_numeric <- ifelse(chol$sex == "F", 1, 0)  # Make sure sex is numeric (1 = Female, 0 = Male)
+
+model2 <- lm(log(hdl) ~ bmi + age + ht + sex_numeric, data = chol)
+summary(model2)
+```
+log(hdl) = 3.6963944 -0.0673316.BMI + 0.0008131.age + 0.0047423.HT + 0.1215634.sex
+
+BMI, HT, and SEX are significant predictors.
+AGE is not.
+
+**8. What is the predicted HDL for a female who has BMI=3, height=61, and age=28? Use your model from (7). Make sure to report in terms of HDL, not log(HDL) and provide the 95% confidence intervals.**
+```{r}
+new_data_female <- data.frame(bmi = 3, age = 28, ht = 61, sex_numeric = 1)
+
+predict_log_hdl_female <- predict(model2, newdata = new_data_female, interval = "confidence", level = 0.95)
+predicted_hdl_female <- exp(predict_log_hdl_female)
+
+predicted_hdl_female
+
+```
+Predicted HDL is 50.8057
+95% Confidence Interval; The HDL is between 48.44179 and 53.28498.
+
+**9. Does it appear that any X-variable(s) can be eliminated from the model without sacrificing much predictive ability? If so, which one(s) and why?**
+```{r}
+summary(step(model2))
+```
+Start:  AIC=-560.13; with bmi, age, ht and sex. 
+Step:  AIC=-561.81 original model without age
+
+so, Age is eliminated without without sacrificing much predictive ability
+
+**10. Does the model in (7) satisfy the 5 assumptions of multiple linear regression? Why or why not?**
+```{r}
+plot(model2)
+vif(model2)
+```
+
+Linearity: Satisfied.
+
+Normality: Mostly satisfied
+
+Homoscedasticity: Satisfied with slight variability.
+
+Independence: Satisfied 
+
+Multicollinearity: Satisfied

@@ -1,0 +1,163 @@
+---
+title: "Problem Set1"
+author: "Ecem Simsek"
+date: "2024-08-29"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Set 1
+
+The problems bellow all use the datasets in the MASS package. Use library(MASS) to make the datasets available; use data(package = "MASS") to see all available datasets.
+
+The first three problems use the cats dataset (Anatomical Data from Domestic Cats). Look at the structure and head of these data to get an understanding of the data. https://rdrr.io/cran/MASS/man/cats.html
+
+```{r}
+library(MASS)
+library(e1071)
+
+data(package = "MASS")
+
+```
+
+
+**1. In the cats dataset, generate the following location statistics for the Bwt variable: mean, 10% trimmed mean, and median. Do the resistant(trimmed) and non-resistant statistics differ substantially? What does that suggest about your data?**
+
+```{r}
+data(cats)
+
+bwt <- cats$Bwt
+
+str(cats)
+head(cats)
+dim(cats)
+
+mean <- mean(bwt)
+mean
+
+trim_mean <- mean(bwt, trim = 0.1)
+trim_mean
+
+median <- median(bwt)
+median
+
+```
+Bwt mean is 2.723611. 
+Bwt trimmed mean is 2.692241.
+Bwt median is 2.7.
+
+Bwt mean and Bwt trimmed mean have small differences. Trimmed mean is lower than mean as slightly. The suggestion; data might does not have many extreme values. Trimmed mean and median are more resistant.
+
+**2. In the cats dataset, find the mode of the Bwt variable. Generate a frequency table and determine if there are multiple modal values close together, or separated by other values? If the modes are separated by other values, what might that suggest?**
+
+```{r}
+#frequency_table
+frequency_table <- table(bwt)
+frequency_table
+```
+```{r}
+#mode
+max_val <- max(frequency_table)
+bwt_mode <- as.numeric(names(frequency_table[frequency_table == max_val]))
+bwt_mode
+```
+Mode is 2.2 and it occurs 14 times. When modes in a dataset are close together, it suggests that the data is clustered around specific values. If modes are separated by gaps, this indicates that there are intervals in the data with fewer occurrences.
+
+
+**3. In the cats dataset, generate frequency and proportion tables to summarize cat sex. What proportion is female?**
+```{r}
+freq <- table(cats$Sex)
+freq
+
+prop <- prop.table(freq)
+prop
+
+female <- prop["F"]
+female
+```
+Female proportion is 0.3263889 
+
+
+**The next three problems use the Melanoma dataset (Survival from Malignant Melanoma). Look at the structure and head of these data to get an understanding of the data. https://rdrr.io/cran/MASS/man/Melanoma.html **
+
+```{r}
+data(Melanoma)
+
+head(Melanoma)
+```
+**4. In the Melanoma dataset, generate a histogram of survival time (time survival time in days) (let R decide on the bin interval). Use breaks = 5 and breaks = 20 to generate two more histograms of the survival time data. Which oversmooths? Undersmooths? In terms of insights the plot provides into properties of survival time, what is lost between the first (default bin width) and the breaks = 5 histogram? Compare the default histogram to the breaks = 20 histogram: What are you seeing in the breaks = 20 plot that may detract from your learning about survival time?**
+
+```{r}
+hist(Melanoma$time, main="Histogram of Survival Time (Default Bins)", xlab="Survival Time", ylab="Frequency")
+
+hist(Melanoma$time, breaks=5, main="Histogram of Survival Time (Breaks = 5)", xlab="Survival Time", ylab="Frequency")
+
+hist(Melanoma$time, breaks=20, main="Histogram of Survival Time (Breaks = 20)", xlab="Survival Time", ylab="Frequency")
+
+```
+Belowed graphics shows default (R decide bin arrange), breaks=5, and breaks=20. Default has more balanced expression. Break= 5 is oversmooth. Break= 20 is undersmooth view. Break= 20 shows more detail or specific shape. However, it also can get a problem with identify meaningfull shape. 
+
+**5. Generate a probability histogram of survival time from the Melanoma dataset (use the default bin interval) and add a rugplot and density plot to the histogram. What does the density plot show you about the distribution of survival times in the population of melanoma patients?**
+
+```{r}
+hist(Melanoma$time, main="Histogram of Survival Time (Default Bins)", xlab="Survival Time", ylab="Density")
+
+lines(density(Melanoma$time), col = "yellow")
+
+rug(Melanoma$time, col = "red")
+```
+The density plot shows the distribution of survival times, highlighting the most common survival time, spread, and multiple peaks. It helps identify the central tendency and variability in survival times.
+
+**6. Generate a boxplot of survival time from the Melanoma dataset. Find and interpret the 5-number summary from the boxplot output. If there are boxplot defined outliers in the data, find their values. From the boxplot, does it appear that survival time data are skewed, and if so in what direction? Check that with a skew statistic.**
+
+```{r}
+num <- Melanoma$time
+
+hist(num, main="Boxplot of Survival Time", ylab="Survival Time")
+
+five <- fivenum(num)
+five
+
+outliers <- boxplot(num)
+outliers
+
+skewness <- skewness(num)
+skewness
+```
+
+The boxplot of survival times shows the distribution's spread, central values, and outliers. The 5-number summary includes minimum, quartiles, median, and maximum. Outliers are plotted individually. Skewness indicates if the data is right-skewed (positive), left-skewed (negative), or symmetric (near 0).
+
+
+**The last problem uses the birthwt dataset (Risk Factors Associated with Low Infant Birth Weight). Look at the structure and head of these data to get an understanding of the data. https://rdrr.io/cran/MASS/man/birthwt.html **
+
+```{r}
+data(birthwt)
+```
+
+**7. In the birthwt dataset, find the standard deviation (SD) of mother's age. Interpret it. Generate a boxplot of the age variable. Using the boxplot rule, identify any extreme values (outliers). Explain how deleting that value would affect the standard deviation. The use sd(birthwt$age[birthwt$age < 45]) to exclude that value in the SD calculation. How much did the SD change? Repeat this analysis with the IQR, and explain why the IQR in not affected by removal of the outlier.**
+
+```{r}
+std <- sd(birthwt$age)
+std
+
+boxplot(birthwt$age,main = "Boxplot of Mother's Age",ylab = "Age")
+
+outliers <- boxplot(birthwt$age, plot = FALSE)$out
+outliers
+
+std_outliers <- sd(birthwt$age[birthwt$age < 45])
+std_outliers
+
+IQR_age <- IQR(birthwt$age)
+IQR_age
+```
+
+The SD of mother's age in the birthwt dataset shows variability. Outliers identified in the boxplot increase the SD, which decreases when outliers are removed. The IQR remains unchanged by outliers as it measures the middle 50% of the data.
+
+## Citation
+* I got help from ChatGPT-4 

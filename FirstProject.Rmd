@@ -1,0 +1,149 @@
+---
+title: "FirstProject"
+author: "Ecem Simsek"
+date: "2024-10-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r pressure, echo=FALSE}
+library(tidyverse)
+library(car)
+library(ggplot2)
+library(ResourceSelection)
+
+
+santa <- read.csv("santa.csv")
+
+colnames(santa)
+```
+
+```{r}
+str(santa)
+
+```
+
+```{r}
+santa_clean_logit <- santa %>%
+  drop_na(HCGI1, areacat, X28fecal, ecoli, enter, totalc, sex, Agenew, tourist, ses)
+
+summary(santa)
+```
+
+```{r}
+santa %>%
+  summarise(mean_X28fecal = mean(X28fecal, na.rm = TRUE),
+            sd_X28fecal = sd(X28fecal, na.rm = TRUE),
+            mean_ecoli = mean(ecoli, na.rm = TRUE),
+            sd_ecoli = sd(ecoli, na.rm = TRUE),
+            mean_enter = mean(enter, na.rm = TRUE),
+            sd_enter = sd(enter, na.rm = TRUE),
+            mean_totalc = mean(totalc, na.rm = TRUE),
+            sd_totalc = sd(totalc, na.rm = TRUE))
+
+santa %>%
+  summarise(
+    mean_QG = mean(QG, na.rm = TRUE),
+    sd_QG = sd(QG, na.rm = TRUE),
+    prop_HCGI1 = mean(HCGI1, na.rm = TRUE),
+    prop_SigResD = mean(SigResD, na.rm = TRUE)
+  )
+
+
+```
+
+```{r}
+model_qg <- lm(QG ~ areacat + X28fecal + ecoli + enter + totalc +
+               sex + Agenew + tourist + ses, data = santa)
+
+summary(model_qg)
+
+vif(model_qg)
+
+par(mfrow = c(2, 2))
+plot(model_qg)
+par(mfrow = c(1, 1))
+```
+
+```{r}
+model_hcgi1 <- glm(HCGI1 ~ areacat + X28fecal + ecoli + enter + totalc +
+                   sex + Agenew + tourist + ses, family = binomial, data = santa)
+
+summary(model_hcgi1)
+
+exp(cbind(Odds_Ratio = coef(model_hcgi1), confint(model_hcgi1)))
+
+hoslem.test(santa_clean_logit$HCGI1, fitted(model_hcgi1))
+```
+
+```{r}
+table_hcgi1 <- table(santa_clean_logit$HCGI1, santa_clean_logit$areacat)
+
+risk_exposed <- table_hcgi1[1, 2] / (table_hcgi1[1, 1] + table_hcgi1[1, 2])
+risk_unexposed <- table_hcgi1[2, 2] / (table_hcgi1[2, 1] + table_hcgi1[2, 2])
+rd <- risk_exposed - risk_unexposed
+cat("Risk Difference (RD):", rd, "\n")
+
+rr <- risk_exposed / risk_unexposed
+cat("Risk Ratio (RR):", rr, "\n")
+
+or <- (table_hcgi1[1, 1] * table_hcgi1[2, 2]) / (table_hcgi1[1, 2] * table_hcgi1[2, 1])
+cat("Odds Ratio (OR):", or, "\n")
+```
+
+```{r}
+# Logistic regression model stratified by sex
+model_hcgi1_sex <- glm(HCGI1 ~ areacat + X28fecal + ecoli + enter + totalc + Agenew + tourist + ses, 
+                       family = binomial, data = santa_clean_logit %>% filter(sex == 1))
+summary(model_hcgi1_sex)
+
+# Calculate Odds Ratios for males
+exp(cbind(Odds_Ratio = coef(model_hcgi1_sex), confint(model_hcgi1_sex)))
+
+# Repeat for females
+model_hcgi1_female <- glm(HCGI1 ~ areacat + X28fecal + ecoli + enter + totalc + Agenew + tourist + ses, 
+                          family = binomial, data = santa_clean_logit %>% filter(sex == 0))
+summary(model_hcgi1_female)
+
+# Calculate Odds Ratios for females
+exp(cbind(Odds_Ratio = coef(model_hcgi1_female), confint(model_hcgi1_female)))
+
+# Logistic regression model with interaction between sex and age
+model_hcgi1_interaction <- glm(HCGI1 ~ sex * Agenew + areacat + X28fecal + ecoli + enter + totalc + tourist + ses, 
+                               family = binomial, data = santa_clean_logit)
+summary(model_hcgi1_interaction)
+
+# Calculate Odds Ratios with 95% CI for interaction model
+exp(cbind(Odds_Ratio = coef(model_hcgi1_interaction), confint(model_hcgi1_interaction)))
+
+# Create a 2x2 table for HCGI1 and age group (Agenew)
+table_hcgi1_age <- table(santa_clean_logit$HCGI1, santa_clean_logit$Agenew)
+
+# Calculate Risk Difference (RD) by age group
+risk_exposed_age <- table_hcgi1_age[1, 2] / (table_hcgi1_age[1, 1] + table_hcgi1_age[1, 2])
+risk_unexposed_age <- table_hcgi1_age[2, 2] / (table_hcgi1_age[2, 1] + table_hcgi1_age[2, 2])
+rd_age <- risk_exposed_age - risk_unexposed_age
+cat("Risk Difference by Age Group (RD):", rd_age, "\n")
+
+# Calculate Risk Ratio (RR) by age group
+rr_age <- risk_exposed_age / risk_unexposed_age
+cat("Risk Ratio by Age Group (RR):", rr_age, "\n")
+
+# Calculate Odds Ratio (OR) by age group
+or_age <- (table_hcgi1_age[1, 1] * table_hcgi1_age[2, 2]) / (table_hcgi1_age[1, 2] * table_hcgi1_age[2, 1])
+cat("Odds Ratio by Age Group (OR):", or_age, "\n")
+
+# Visualize the distribution of HCGI1 (gastrointestinal illness) by age and sex
+ggplot(santa_clean_logit, aes(x = factor(Agenew), fill = factor(HCGI1))) +
+  geom_bar(position = "fill") +
+  facet_wrap(~ sex) +
+  labs(x = "Age Group", y = "Proportion", fill = "HCGI1") +
+  theme_minimal() +
+  ggtitle("Proportion of Gastrointestinal Illness (HCGI1) by Age and Sex")
+```
+
+

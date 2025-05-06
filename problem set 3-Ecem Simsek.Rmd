@@ -1,0 +1,117 @@
+---
+title: "Problem Set 3"
+author: "Ecem Simsek"
+date: "2024-09-12"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Melanoma dataset (Survival from Malignant Melanoma)
+library(MASS)
+# Load the Melanoma dataset
+data("Melanoma")
+str(Melanoma)
+head(Melanoma)
+dim(Melanoma)
+
+#Risk Ratio
+calculate_risk_ratio <- function(table){
+  #risk exposed: male
+  risk_exposed <- table[2, 2] / (table[2, 1] + table[2, 2])
+  #unexposed: Female
+  risk_unexposed <- table[1, 2] / (table[1, 1] + table[1, 2])
+  rr <- risk_exposed / risk_unexposed
+  return(rr)
+}
+
+#odd ratio
+calculate_odds_ratio <- function(table){
+  or <- (table[2, 2] * table[1, 1]) / (table[2, 1] * table[1, 2])
+  return(or)
+}
+
+# Function to calculate Risk Difference
+calculate_risk_difference <- function(table) {
+risk_exposed <- table[1, 1] / (table[1, 1] + table[1, 2])
+risk_unexposed <- table[2, 1] / (table[2, 1] + table[2, 2])
+rd <- risk_exposed - risk_unexposed
+return(rd)
+}
+
+
+```
+
+**1. In the Melanoma data set, generate a frequency table to explore the relationship between sex and ulcer. It will be easier to interpret and use the table if variable categories are renamed from 0 and 1 to the labels used in the code book. Rename these variables, then calculate and interpret the RR and OR.**
+```{r}
+#1 = Male, 0 = Female
+Melanoma$sex <- factor(Melanoma$sex, labels = c("Female", "Male"))
+
+#1 = Yes, 0 = No
+Melanoma$ulcer <- factor(Melanoma$ulcer, labels = c("No Ulcer", "Ulcer"))
+
+freq_table <- table(Melanoma$sex, Melanoma$ulcer)
+print(freq_table)
+
+rr <- calculate_risk_ratio(freq_table)
+or <- calculate_odds_ratio(freq_table)
+
+cat("Risk Ratio:", rr, "\n")
+cat("Odds Ratio:", or, "\n")
+
+```
+Patients have an 86% chance of dying with no ulcer. However, the chance of dying is 54% because of ulcers.
+
+**2. Explore the relationship between sex and survival status. First, recode status to a two-categories (dead and alive) variable and label it appropriately. Then generate a table of conditional proportions of dying (the outcome of interest) for female and male patients, respectively. Summarize the relationship with RD, RR, and OR statistics. What do these statistics tell you about the relationship?**
+```{r}
+#two categories: 1=alive, 0=dead
+Melanoma$status <- ifelse(Melanoma$status == 1, "Alive", "Dead")
+
+freq <- table(Melanoma$sex, Melanoma$status)
+print(freq)
+
+# conditional proportions
+conditional_proportions <- prop.table(freq, margin = 1)
+print(conditional_proportions)
+
+rd <- calculate_risk_difference(conditional_proportions)
+rr <- calculate_risk_ratio(conditional_proportions)
+or <- calculate_odds_ratio(conditional_proportions)
+
+cat("Risk Difference (RD):", rd, "\n")
+cat("Risk Ratio (RR):", rr, "\n")
+cat("Odds Ratio (OR):", or, "\n")
+```
+
+After recoding survival status, the results show that male patients have a higher risk of death than female patients. The Risk Difference (RD), Risk Ratio (RR), and Odds Ratio (OR) all indicate that males are more likely to die compared to females. This suggests a higher mortality risk for male patients in the dataset.
+
+
+**3. Write a summary of your analysis for the relationship between sex and survival status.**
+In the melanoma dataset, male patients have a higher risk of death compared to female patients. The Risk Difference (RD) shows that males are more likely to die. The Risk Ratio (RR) and Odds Ratio (OR) also indicate that males have a higher risk and lower odds of survival compared to females. Overall, being male is linked to a higher chance of death.
+
+**4. Repeat the #2 but with ulcer rather than sex as a predictor.**
+```{r}
+freq_ulcer <- table(Melanoma$ulcer, Melanoma$status)
+print(freq_ulcer)
+
+conditional_proportions_ulcer <- prop.table(freq_ulcer, margin = 1)
+print(conditional_proportions_ulcer)
+
+rd_ulcer <- calculate_risk_difference(conditional_proportions_ulcer)
+rr_ulcer <- calculate_risk_ratio(conditional_proportions_ulcer)
+or_ulcer <- calculate_odds_ratio(conditional_proportions_ulcer)
+
+cat("Risk Difference (RD):", rd_ulcer, "\n")
+cat("Risk Ratio (RR):", rr_ulcer, "\n")
+cat("Odds Ratio (OR):", or_ulcer, "\n")
+```
+When looking at ulcers as a predictor of survival, the results show that patients with ulcers have a higher chance of dying. The Risk Difference (RD) is -31.64%, meaning ulcer patients are 31.64% more likely to die. The Risk Ratio (RR) is 0.63, indicating that ulcer patients are 37% less likely to survive compared to those without ulcers. The Odds Ratio (OR) of 0.19 shows that the odds of survival are much lower for ulcer patients.
+
+**5. Write a summary of your analysis for the relationship between ulcer and survival status.**
+In the melanoma dataset, patients with ulcers have a higher risk of death compared to those without ulcers. The Risk Difference (RD) of -31.64% shows that ulcer patients are 31.64% more likely to die. The Risk Ratio (RR) of 0.63 means that ulcer patients are 37% less likely to survive than those without ulcers. The Odds Ratio (OR) of 0.19 also shows that ulcer patients have much lower odds of survival. Overall, having an ulcer is linked to a higher risk of death.
+

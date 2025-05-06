@@ -1,0 +1,132 @@
+---
+title: "Problem Set 4"
+author: "Ecem Simsek"
+date: "2024-09-16"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+chol <- read.csv("chol.csv")
+head(chol)
+str(chol)
+
+```
+**1. Create scatterplots of HDL vs. AGE separately for males and females.**
+
+```{r}
+ggplot(chol[chol$sex == "M", ], aes(x = age, y = hdl)) +
+  geom_point() +
+  labs(title = "HDL vs AGE for Males", x = "Age", y = "HDL")
+
+ggplot(chol[chol$sex == "F", ], aes(x = age, y = hdl)) +
+  geom_point() +
+  labs(title = "HDL vs AGE for Females", x = "Age", y = "HDL")
+```
+
+**2. Let rho_M denote the correlation between HDL and AGE in males, and rho_F denote the corresponding correlation in females. Using the approach described in the lecture notes, write a R program to test the null hypothesis that rho_M = rho_F.**
+
+```{r}
+chol$age <- as.numeric(chol$age)
+chol$hdl <- as.numeric(chol$hdl)
+
+chol_clean <- chol[!is.na(chol$age) & !is.na(chol$hdl), ]
+
+rho_M <- cor(chol_clean$age[chol_clean$sex == "M"], chol_clean$hdl[chol_clean$sex == "M"])
+rho_F <- cor(chol_clean$age[chol_clean$sex == "F"], chol_clean$hdl[chol_clean$sex == "F"])
+
+z_M <- 0.5 * log((1 + rho_M) / (1 - rho_M))
+z_F <- 0.5 * log((1 + rho_F) / (1 - rho_F))
+
+n_M <- sum(chol_clean$sex == "M")
+n_F <- sum(chol_clean$sex == "F")
+
+se_diff <- sqrt(1 / (n_M - 3) + 1 / (n_F - 3))
+
+z_stat <- (z_M - z_F) / se_diff
+
+# p-value (If the p-value is less than a significance level (commonly 0.05), we reject the null hypothesis and conclude that there is a significant difference between the correlation coefficients for males and females.)
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+z_stat  
+p_value 
+
+```
+Z statistic is −2.6575 and a p-value is 0.00787. so, null hypothesis is rejected because it is less than significant level. The relationship between HDL and AGE is differs between male and female. 
+
+**3. Compute and interpret a 99% confidence interval for the true correlation between HDL and AGE for males, and again for females.**
+```{r}
+z_crit <- qnorm(0.99)
+
+ci_M <- z_M + c(-1, 1) * z_crit * sqrt(1 / (n_M - 3))
+rho_ci_M <- (exp(2 * ci_M) - 1) / (exp(2 * ci_M) + 1)
+
+ci_F <- z_F + c(-1, 1) * z_crit * sqrt(1 / (n_F - 3))
+rho_ci_F <- (exp(2 * ci_F) - 1) / (exp(2 * ci_F) + 1)
+
+rho_ci_M
+rho_ci_F
+```
+
+For Males: The correlation is between HDL and AGE is [−0.3918,0.0710]. This range includes zero. We can't exactly say significant correlation between HDL and AGE for males.
+
+For Females: Correlation between HDL and AGE is [−0.0221,0.4325]. It is close to zero so we can say positive relationship between HDL and AGE for females is limited.
+
+**4. Summarize your overall conclusions regarding the relationship between HDL and AGE in males and females based on your analysis above in (1-3).**
+There is no significant correlation between HDL and AGE for males, as the confidence interval includes zero.
+
+For females, there may be a weak positive correlation, but the evidence is not strong enough to definitively conclude a significant relationship.
+
+Relationship between HDL and AGE is different between males and females,
+
+**5. Fit three models with Y = log(HDL) and three X-variables independently: BMI, AGE, and HT. (Make sure write down the equation of each model.)**
+```{r}
+chol_clean$log_hdl <- log(chol_clean$hdl)
+
+model_bmi <- lm(log_hdl ~ bmi, data = chol_clean)
+summary(model_bmi)
+
+model_age <- lm(log_hdl ~ age, data = chol_clean)
+summary(model_age)
+
+model_ht <- lm(log_hdl ~ ht, data = chol_clean)
+summary(model_ht)
+```
+BMI does not appear to be a significant predictor of log(HDL) in this model, and the overall model does not explain much variation in log(HDL).
+
+**6. What is the independent predicted HDL for a BMI = 3, height = 61, and age = 28? (use your models from 5)**
+```{r}
+new_data <- data.frame(bmi = 3, ht = 61, age = 28)
+
+pred_bmi <- predict(model_bmi, newdata = new_data)
+pred_age <- predict(model_age, newdata = new_data)
+pred_ht <- predict(model_ht, newdata = new_data)
+
+exp(pred_bmi)
+exp(pred_age)
+exp(pred_ht)
+```
+Predicted HDL based on BMI: 47.55
+Predicted HDL based on Age: 47.50
+Predicted HDL based on Height (HT): 47.34
+
+**7. Do the modes in (5) satisfy the 5 assumptions of linear regression?**
+```{r}
+# Diagnostic plots for the BMI model
+par(mfrow = c(2, 2))  # Display multiple plots in one window
+plot(model_bmi)
+
+# Diagnostic plots for the AGE model
+plot(model_age)
+
+# Diagnostic plots for the HT model
+plot(model_ht)
+```
+

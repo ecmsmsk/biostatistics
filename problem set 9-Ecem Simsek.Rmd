@@ -1,0 +1,158 @@
+---
+title: "Problem Set 9"
+author: "Ecem Simsek"
+date: "2024-11-07"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**1. A clinical trial was conducted to test the efficacy of different vitamin supplements in preventing visual loss in patients with retinitis pigmentosa. Visual loss was measured by loss of retinal function as characterized by a 50% decline in the ERT (electroretinogram) 30 Hz amplitude, a measure of the electrical activity in the retina. Patients were randomized to 15,000 IU of vitamin A or 75 IU of vitamin A. Patients were enrolled in 1984-87 and follow-up was terminated in September 1991. “Failure” was defined as visual loss. “Censored” was defined as dropouts due to either death, other disease, side effects possibly due to the study medications, or unwillingness to comply.**
+
+**a. Use the provided Excel workbook to estimate the survival probability at each of years 1-6 for subjects receiving 15,000 IU of vitamin A and subjects receiving 75 IU of vitamin A.**
+
+1. **Failure Probability \( q(t) \):**
+   $$
+   q(t) = \frac{\text{Fail}(t)}{\text{Total}(t)}
+   $$
+
+2. **Survival Probability \( p(t) \):**
+   $$
+   p(t) = 1 - q(t)
+   $$
+
+3. **Cumulative Survival Probability \( S(t) \):**
+   $$
+   S(t) = S(t-1) \times p(t)
+   $$
+
+```{r}
+data_15000_IU <- data.frame(
+  Time= 1:6,
+  Fail = c(3, 6, 15, 21, 15, 5),
+  Censored = c(4, 0, 1, 26, 35, 41),
+  Survive = c(165, 159, 143, 96, 46, 0),
+  Total = c(172, 165, 159, 143, 96, 46)
+)
+
+data_75_IU <- data.frame(
+  Time = 1:6,
+  Fail = c(8, 13, 21, 21, 13, 13),
+  Censored = c(0, 3, 2, 28, 31, 29),
+  Survive = c(174, 158, 135, 86, 42, 0),
+  Total = c(182, 174, 158, 135, 86, 42)
+)
+
+calculate_survival <- function(data) {
+  data$q_t <- data$Fail / data$Total
+  data$p_t <- 1 - data$q_t
+  data$S_t <- cumprod(data$p_t)  
+  return(data)
+}
+
+survival_15000_IU <- calculate_survival(data_15000_IU)
+survival_75_IU <- calculate_survival(data_75_IU)
+
+print("15,000 IU of Vitamin A Daily")
+print(survival_15000_IU)
+
+print("75 IU of Vitamin A Daily")
+print(survival_75_IU)
+
+```
+
+**b. Use the provided Excel workbook to conduct a logrank test, compare the survival curves for subjects receiving 15,000 IU of Vitamin A versus subjects receiving 75 IU of vitamin A.**
+
+```{r}
+logrank_data <- data.frame(
+  Time = 1:6,
+  Fail_15000 = c(3, 6, 15, 21, 15, 5),
+  Censored_15000 = c(4, 0, 1, 26, 35, 41),
+  Total_15000 = c(172, 165, 159, 143, 96, 46),
+  Fail_75 = c(8, 13, 21, 21, 13, 13),
+  Censored_75 = c(0, 3, 2, 28, 31, 29),
+  Total_75 = c(182, 174, 158, 135, 86, 42)
+)
+
+logrank_data$Total_Risk <- logrank_data$Total_15000 + logrank_data$Total_75
+logrank_data$Total_Fail <- logrank_data$Fail_15000 + logrank_data$Fail_75
+
+logrank_data$Expected_15000 <- logrank_data$Total_Fail * (logrank_data$Total_15000 / logrank_data$Total_Risk)
+logrank_data$Expected_75 <- logrank_data$Total_Fail * (logrank_data$Total_75 / logrank_data$Total_Risk)
+
+logrank_data$O_minus_E_15000 <- logrank_data$Fail_15000 - logrank_data$Expected_15000
+logrank_data$O_minus_E_75 <- logrank_data$Fail_75 - logrank_data$Expected_75
+
+logrank_data$ChiSq_15000 <- (logrank_data$O_minus_E_15000)^2 / logrank_data$Expected_15000
+logrank_data$ChiSq_75 <- (logrank_data$O_minus_E_75)^2 / logrank_data$Expected_75
+
+chi_square_stat <- sum(logrank_data$ChiSq_15000, logrank_data$ChiSq_75)
+df <- 1  # degree
+
+p_value <- pchisq(chi_square_stat, df, lower.tail = FALSE)
+
+cat("Chi-square statistic:", chi_square_stat, "\n")
+cat("p-value:", p_value, "\n")
+
+print("Intermediate values:")
+print(logrank_data[c("Time", "Total_Risk", "Total_Fail", "Expected_15000", "Expected_75")])
+
+```
+
+**c. Write a statement which interprets your findings in (b).**
+
+The log-rank test results show a statistically significant difference in survival between the two groups receiving different dosages of Vitamin A (15,000 IU and 75 IU daily) for preventing visual loss, with a chi-square statistic of 9.63 and a p-value of 0.0019. This indicates that the survival probability, or the ability to delay visual loss, differs significantly between the groups.
+
+
+**d. EXTRA CREDIT: In the provided Excel workbook make a KM survival curve in the provided Excel workbook. This curve should look like a step-wise KM curve, with the x-axis representing time in years and the y-axis representing the survival probability. The curve should have two lines, one for each treatment group. The table and graph are set up in the workbook, all you should need to do is populate the table. It's not a straight forward ask, if you get it correct you will be rewarded.**
+
+```{r}
+library(ggplot2)
+
+survival_15000_IU$Group <- "15,000 IU"
+survival_75_IU$Group <- "75 IU"
+
+survival_data <- rbind(
+  data.frame(Time = survival_15000_IU$Time, Survival = survival_15000_IU$S_t, Group = survival_15000_IU$Group),
+  data.frame(Time = survival_75_IU$Time, Survival = survival_75_IU$S_t, Group = survival_75_IU$Group)
+)
+
+ggplot(survival_data, aes(x = Time, y = Survival, color = Group)) +
+  geom_step(linewidth = 1.2) + 
+  labs(
+    title = "Kaplan-Meier Survival Curves for Vitamin A Dosages",
+    x = "Time (years)",
+    y = "Survival Probability"
+  ) +
+  scale_y_continuous(limits = c(0, 1)) +  # y-axis limits from 0 to 1
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold")
+  ) +
+  scale_color_manual(values = c("blue", "red")) +
+  guides(color = guide_legend(title = "Vitamin A Dosage"))
+
+```
+
+**2. Read Hulley et al., "Randomized Trial of Estrogen Plus Progestin for Secondary Prevention of Coronary Heart Disease in Postmenopausal Women" and answer the following questions. Find this article here, https://jamanetwork.com/journals/jama/article-abstract/187879.**
+
+
+**a. What were the primary and secondary outcomes measured in the trial, and how did the use of estrogen plus progestin impact these outcomes compared to the control group?**
+
+The primary outcome in this trial was the combined occurrence of nonfatal myocardial infarction (MI) or coronary heart disease (CHD) death. The study found no significant reduction in nonfatal MI or CHD death in the estrogen plus progestin group compared to the placebo group, with a relative hazard (RH) of 0.99 (95% CI, 0.80-1.22), indicating no overall benefit of hormone therapy on CHD events. 
+
+Secondary outcomes included various cardiovascular events such as coronary revascularization, unstable angina, and stroke, along with all-cause mortality. There were also no significant differences between the treatment and control groups for any of these secondary outcomes, meaning that hormone therapy did not improve or significantly impact cardiovascular health in this population.
+
+**b. Were there any significant differences in adverse events or risks (such as increased risk of thromboembolic events or breast cancer) between the treatment and control groups?**
+
+There were significant differences in adverse events between the groups. The hormone group had a higher rate of venous thromboembolic events (34 cases vs. 12 in the placebo group; RH 2.89) and more cases of gallbladder disease (84 vs. 62 cases; RH 1.38). There was no significant difference in breast cancer rates, although the study’s duration may have been too short to assess long-term cancer risks fully.
+
+
+**c.How was the study population defined, and were there any notable demographic or health-related differences (e.g., age, prior heart disease, comorbidities) that may have influenced the results?**
+
+The study population consisted of postmenopausal women younger than 80 with documented coronary heart disease, including prior heart attacks or coronary interventions. The average age was around 66.7 years, with most participants being white and generally well-educated. Due to the randomization process, both the hormone and placebo groups were similar in demographics and health status at baseline, minimizing the likelihood that these factors influenced the study's outcomes.

@@ -1,0 +1,159 @@
+---
+title: "Problem Set 8"
+author: "Ecem Simsek"
+date: "2024-10-24"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(pander)
+```
+
+*1. Follow the example from the Nurse Health Study below write code to read in the data with the following variables:*
+
+
+- `test` = breathing test (0 = non normal, 1 = normal)
+- `over40` = age over 40 (0 = Age < 40, 1 = Age 40-59)
+- `neversmk` = smoking status (0 = ever smoke, 1 = never smoke)
+
+
+```{r}
+smoke_tab <- data.frame(
+  test = c(1, 0, 1, 0, 1, 0, 1, 0),  # Normal vs Not Normal
+  over40 = c(0, 0, 1, 1, 0, 0, 1, 1),  # Age group (0 = <40, 1 = 40-59)
+  neversmk = c(1, 1, 1, 1, 0, 0, 0, 0),  # Smoking status (1 = never, 0 = current)
+  rep = c(577, 34, 164, 4, 682, 57, 245, 74)  # Count of each combination
+)
+
+print(smoke_tab)
+```
+
+
+*2. Convert the data to a long format using uncount(). Follow the example from the lecture.*
+
+```{r}
+smoke_long <- uncount(smoke_tab, rep)
+
+```
+
+
+
+*3. Create a summary table of the data and check your data to make sure it's coded correctly. Follow the example from the lecture.*
+```{r}
+summary_table <- smoke_long %>%
+  group_by(over40, neversmk, test) %>%
+  summarise(count = n(), .groups = 'drop')
+
+pander(summary_table)
+```
+
+
+*4. Create a variable `nsmkage` that is the interaction between `neversmk` and `over40`. Follow the example from the lecture.*
+
+```{r}
+smoke_long$nsmkage <- smoke_long$neversmk * smoke_long$over40
+
+head(smoke_long)
+```
+
+*5. Fit the full logistic regression model with the interaction term.*
+```{r}
+full_model <- glm(test ~ neversmk * over40, family = binomial, data = smoke_long)
+
+summary(full_model)
+```
+
+
+*6. What does the Wald statistic tell you about the interaction term?*
+
+The Wald statistic for the interaction term (neversmk:over40) has a p-value of 0.00014, which is highly significant. This indicates that the interaction between smoking status and age has a significant effect on the breathing test result.
+
+*7. Conduct a likelihood ratio test to determine if the interaction term is significant, fitting the reduced model without the interaction term and using the anova() function with test = "LRT". Follow the example from the lecture.*
+```{r}
+reduced_model <- glm(test ~ neversmk + over40, family = binomial, data = smoke_long)
+
+lrt <- anova(reduced_model, full_model, test = "LRT")
+
+pander(lrt)
+
+```
+
+*8. Write a conclusion about the interaction between smoking status and age on the breathing test result. Report the LR statistic, degrees of freedom, and p-value.*
+
+The LRT statistic is 20.66 with 1 degree of freedom, and the p-value is 5.497e-06. This confirms that the interaction between smoking status and age is statistically significant. The model with the interaction term is a better fit compared to the reduced model.
+
+*9. What does this test tell you about the interaction between smoking status and age on the breathing test result? Do you need to evaluate for confounding? If so, then proceed to evaluate for confounding.*
+
+The test shows that the interaction between smoking status and age is significant (p = 5.497e-06). This means smoking affects breathing test results differently depending on age. There's a stronger effect in the 40-59 age group.
+
+Confounding evaluation is not necessary because the focus is on the interaction between smoking status and age.
+
+*10. If the interaction is significant, calculate the stratified odds ratios and 95% Wald confidence intervals for smoking status by age group. Note: There would be 2 odds ratios, one for each age group. Use the methods from the lecture to calculate the odds ratios and confidence intervals. Write the final model and write a conclusion.*
+
+```{r}
+# Subset data for Age < 40
+smoke_under40 <- subset(smoke_long, over40 == 0)
+
+# Fit logistic regression for Age < 40
+model_under40 <- glm(test ~ neversmk, family = binomial, data = smoke_under40)
+summary(model_under40)
+
+# Calculate odds ratio and CI for Age < 40
+exp(cbind(OR = coef(model_under40), confint(model_under40)))
+
+# Subset data for Age 40-59
+smoke_40to59 <- subset(smoke_long, over40 == 1)
+
+# Fit logistic regression for Age 40-59
+model_40to59 <- glm(test ~ neversmk, family = binomial, data = smoke_40to59)
+summary(model_40to59)
+
+# Calculate odds ratio and CI for Age 40-59
+exp(cbind(OR = coef(model_40to59), confint(model_40to59)))
+
+# Fit the final logistic regression model with interaction term
+final_model <- glm(test ~ neversmk * over40, family = binomial, data = smoke_long)
+summary(final_model)
+```
+Age <40: Odds ratio for never vs. current smokers = 1.42 (95% CI: 0.92, 2.22) – Not significant.
+Age 40-59: Odds ratio for never vs. current smokers = 12.38 (95% CI: 5.02, 41.20) - significant
+
+Model Summary:
+
+Intercept: 2.4820 (p < 0.001)
+Never smoked (neversmk): 0.3495 (p = 0.119)
+Age 40-59 (over40): -1.2848 (p < 0.001)
+Interaction (neversmk): 2.1669 (p < 0.001)
+
+The logistic regression model demonstrates a significant interaction between smoking status and age on the breathing test results. The p-value for the interaction term (p = 0.00014) indicates that smoking status impacts the breathing test differently depending on age. Specifically, in the 40-59 age group, never smokers have a higher probability of a normal breathing test result compared to current smokers. In the younger group (<40), the effect of smoking status is not as pronounced. This suggests a differential effect of smoking across age groups on the likelihood of a normal breathing test.
+
+*Read Zachry et al., "Case-control analysis of ambulance, emergency room, or inpatient hospital events for epilepsy and antiepileptic drug formulation changes," and answer the following questions:*
+
+*12. What is the research question in this study?*
+
+The research question is: Is there an association between inpatient/emergency epilepsy care and recent switches in A-rated antiepileptic drug (AED) formulations?
+
+
+*13. What is the study design?*
+
+The study is a retrospective case-control design using the Ingenix LabRx Database to analyze patients who had inpatient or emergency care for epilepsy and their recent history of A-rated AED formulation switches
+
+
+*14. What was the statistical question?*
+
+The statistical question was whether patients with inpatient or emergency epilepsy care had greater odds of having undergone a recent switch between A-rated AED formulations compared to controls
+
+
+*15. The authors find that the cases had 81% greater odds of having an A-rated AED formulation switch. This is with an odds ratio of 1.81. How do they go from the odds ratio to the percentage?*
+
+The percentage increase is calculated by subtracting 1 from the odds ratio and multiplying by 100. In this case: (1.81 - 1) * 100 = 81%. This means cases had 81% higher odds of experiencing an A-rated AED formulation switch than controls
+

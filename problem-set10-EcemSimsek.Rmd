@@ -1,0 +1,81 @@
+---
+title: "Problem Set 10"
+author: "Ecem Simsek"
+date: "2024-11-14"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*1. Using the survexp.us from the survival package, data(survexp, package="survival"), as in the example in the lecture notes, plot the hazard functions for men and women in 1940 and 2000. Comment on the change in mortality rates in children.*
+```{r, warning=FALSE}
+library(survival)
+library(ggplot2)
+
+data(survexp.us, package = "survival")
+
+tm <- c(0, 1/365, 7/365, 28/365, 1:110)[1:110]
+
+hazMale1940 <- survexp.us[, "male", "1940"]
+hazFemale1940 <- survexp.us[, "female", "1940"]
+hazMale2000 <- survexp.us[, "male", "2000"]
+hazFemale2000 <- survexp.us[, "female", "2000"]
+
+plot(tm, hazMale1940, type="l", col="blue", xlab="Age (years)", ylab="Hazard", main="Hazard Functions for Men and Women (1940 & 2000)")
+lines(tm, hazFemale1940, col="red")
+lines(tm, hazMale2000, col="blue", lty=2)
+lines(tm, hazFemale2000, col="red", lty=2)
+legend("topright", legend=c("1940 Male", "1940 Female", "2000 Male", "2000 Female"), col=c("blue", "red", "blue", "red"), lty=c(1, 1, 2, 2))
+
+```
+
+*2. The data set survexp.usr in the survival package is a four dimensional array of hazards in format similar to the survexp.us data set, with race (black or white) in the added dimension. Plot the hazard functions for black males and white males for 1940 and 2000. Comment on the differences in mortality rates between the two.*
+
+```{r, warning=FALSE}
+data(survexp.usr, package = "survival")
+
+hazBlackMale1940 <- survexp.usr[, 1, 2, 1]   # black male in 1940
+hazWhiteMale1940 <- survexp.usr[, 1, 1, 1]   # white male in 1940
+hazBlackMale2000 <- survexp.usr[, 1, 2, 61]  # black male in 2000
+hazWhiteMale2000 <- survexp.usr[, 1, 1, 61]  # white male in 2000
+
+
+plot(tm, hazWhiteMale1940, type="l", col="blue", xlab="Age (years)", ylab="Hazard", main="Hazard Functions for Black and White Males (1940 & 2000)")
+lines(tm, hazBlackMale1940, col="purple")
+lines(tm, hazWhiteMale2000, col="blue", lty=2)
+lines(tm, hazBlackMale2000, col="purple", lty=2)
+legend("topright", legend=c("1940 White Male", "1940 Black Male", "2000 White Male", "2000 Black Male"), col=c("blue", "purple", "blue", "purple"), lty=c(1, 1, 2, 2))
+```
+
+*3. Simulate survival data using the time and event vectors below. Load needed packages, make a dataframe, and create the survival object.*
+
+```{r, warning=FALSE}
+time <- c(9,9,7,6,6,5,4,2,4,1,1,1,1,5,3,2)
+event <- c(0,1,0,0,1,1,0,1,0,0,1,0,0,0,0,0) # 1 = event occurred, 0 = censored
+
+df <- data.frame(time, event)
+surv_obj <- Surv(time, event)
+```
+
+*4. Fit the data from question 3. Using methods from the lecture, find the median survival, and a 95% confidence interval for the median. Explain why the upper limit of the confidence interval is undefined.*
+
+```{r, warning=FALSE}
+fit <- survfit(surv_obj ~ 1)
+summary(fit)
+```
+
+
+*5. Plot the Kaplan-Meier curves for the data in question 3 two ways. First plot just using the plot function. Then use the ggsurvplot function from the survminer package to plot the curves. For the second curve include conf.int = TRUE, risk.table = TRUE, surv.median.line = "v", 'ggtheme = theme_minimal()', and use palette to give your line a color. Give both plots the title "Kaplan-Meier Estimate". Comment on the differences between the two plots*
+
+```{r, warning=FALSE}
+plot(fit, main="Kaplan-Meier Estimate", xlab="Time", ylab="Survival Probability")
+
+library(survminer)
+
+ggsurvplot(fit, data = df, conf.int = TRUE, risk.table = TRUE, surv.median.line = "v", 
+           ggtheme = theme_minimal(), palette = "blue", title = "Kaplan-Meier Estimate")
+```

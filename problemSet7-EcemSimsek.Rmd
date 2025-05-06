@@ -1,0 +1,73 @@
+---
+title: "Problem Set 7"
+author: "Ecem Simsek"
+date: "2024-10-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+**1. What are the statistical methods used in this study? Are they clearly described?**
+They used multivaraible unconditional logistic regression model to calcilate odds ratios (OR) and 95% confidence intervals (CIs).
+
+Polytomous logistic regression assessed differences across subtypes, with the Wald test used for heterogeneity. The analyses were stratified by menopausal status and race/ethnicity. 
+
+Trend tests and interaction terms were used to evaluate associations and differences between groups. 
+
+Cases with missing data were excluded from the final analysis.
+
+**2. What are the key findings of this study? Where did you find this information? Was it clearly articulated?**
+Higher parity without breastfeeding increased the risk of certain breast cancer subtypes in premenopausal African American women.
+
+Higher parity with breastfeeding reduced the risk of breast cancer, especially the luminal A subtype, in Asian American and Hispanic women.
+
+Older age at first pregnancy and a longer time between menarche and first pregnancy increased the risk of luminal A breast cancer.
+
+Breastfeeding was the most protective factor, lowering the risk of luminal A and HER2-enriched breast cancer.
+
+Breast cancer risk patterns differed by race and ethnicity, showing variation in how reproductive factors affected African American, Asian American, and Hispanic women.
+
+This information was clearly stated in the results and discussion sections of the study.
+
+
+**3. Notice how the authors plot the odds ratios and 95% confidence intervals in Figs 1 and 2.What do you think of this method of presenting the results? How does it compare to the traditional method of presenting results in a table? Recall that undefined is the null hypothesis. and when a 95% CI crosses the null, we do not have a statistically significant relationship between our outcome and our exposure. When the 95% CI does not cross the null, we have a statistically significant relationship between our outcome and our exposure.**
+
+You can immediately see if a result is statistically significant. If the 95% CI does not cross the null, the relationship is significant. If it crosses the null, it’s not significant. Figures show trends and patterns more clearly, especially when comparing different groups. also, the figures allow for quick, side-by-side comparison of ORs for different variables, making it easier to spot differences between categories.
+ 
+If we compare tables and firgures,
+Tables provide more precise OR and CI values, but it takes more effort to manually assess significance and compare groups. 
+Figures, on the other hand, visually emphasize significance and trends, making them easier to interpret at a glance.
+
+
+**4. Fit 2 logistic regression models to predict survival to discharge ('sta') based on each of the following variables:**
+
+**'age' (Age at Admission)
+'age_group' (Age at Admission, as you categorized in the last problem set: "15-24","25-34","35-44","45-54","55-64","65-74","75-84","85-94")**
+
+```{r}
+library(aplore3)
+data(icu)
+
+icu$sta_binary <- ifelse(icu$sta == "Died", 1, 0)
+
+model_age <- glm(sta_binary ~ age, data = icu, family = binomial)
+
+summary(model_age)
+```
+
+```{r}
+icu$age_group <- cut(icu$age,
+                     breaks = c(15, 24, 34, 44, 54, 64, 74, 84, 94),
+                     labels = c("15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85-94"),
+                     right = TRUE)
+
+model_age_group <- glm(sta_binary ~ age_group, data = icu, family = binomial)
+
+summary(model_age_group)
+```
+

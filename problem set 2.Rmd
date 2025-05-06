@@ -1,0 +1,179 @@
+---
+title: "Assignment"
+author: "Ecem Simsek"
+date: "2024-09-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem Set 2
+
+**Reproduce the tables below in R and compute the following "by hand" using R. Make sure to write up suitable conclusions in a manner that one would find in a peer-reviewed publication.**
+
+```{r}
+# Manually create a 2x2 contingency table
+contingency_table <- matrix(c(96, 104, 109, 666), nrow = 2, byrow = TRUE)
+contingency_table
+
+# Add row and column names
+dimnames(contingency_table) <- list(
+Esophageal_Cancer = c("Left", "Right"),
+Daily_Alcohol_Consumption = c("Female", "Male")
+)
+# Convert to table class
+con_tab <- as.table(contingency_table)
+# Print the table
+print(con_tab)
+
+
+# Add margins (row and column sums) to the table
+# Row and column sums together
+con_tab_mar <- addmargins(con_tab)
+# Print the table with margins
+print(con_tab_mar)
+
+
+# Proportions by column gets us the proportions we need for now
+prop.table(con_tab, margin = 2)
+
+# For reference we can calculate addtional proportion that might be useful like
+# overall
+prop.table(con_tab)
+# by row
+prop.table(con_tab, margin = 1)
+
+
+# Recall we made a contingency_table matrix
+contingency_table
+# Create a, b, c, d variables for calculations
+a <- contingency_table[1]
+c <- contingency_table[2]
+b <- contingency_table[3]
+d <- contingency_table[4]
+
+
+# Calculate probabilities
+# P(Presence | Group 1)
+p1 <- a / (a + c)
+print(p1)
+# P(Presence | Group 2)
+p2 <- b / (b + d)
+print(p2)
+# P(Absence | Group 1)
+a1 <- c / (a + c)
+print(a1)
+# P(Absence | Group 2)
+a2 <- d / (b + d)
+print(a2)
+
+```
+**1. Compute the odds ratio for heavy drinking in cases relative to controls. Write a conclusion.**
+
+```{r}
+or <- (p1 / a1) / (p2 / a2)
+print(or)
+```
+The odds ratio (OR) is 5.64. it is 5.64 times more likely for heavy drinkers to have esophageal cancer.
+
+**The table below shows the hypothetical incidence of a disease assuming a 30% exposure prevalence, an average annual incidence rate of 0.02 in exposed persons and 0.01 in unexposed persons, and the 3-year disease risk.**
+
+```{r}
+# Manually create a 2x2 contingency table
+contingency_table <- matrix(c(180, 210, 2820, 6790), nrow = 2, byrow = TRUE)
+contingency_table
+
+# Add row and column names
+dimnames(contingency_table) <- list(
+c("Diseased", "Disease-free"),
+c("Exposed", "Unexposed")
+)
+# Convert to table class
+con_tab <- as.table(contingency_table)
+# Print the table
+print(con_tab)
+
+
+# Add margins (row and column sums) to the table
+# Row and column sums together
+con_tab_mar <- addmargins(con_tab)
+# Print the table with margins
+print(con_tab_mar)
+
+
+# Proportions by column gets us the proportions we need for now
+prop.table(con_tab, margin = 2)
+
+# For reference we can calculate addtional proportion that might be useful like
+# overall
+prop.table(con_tab)
+# by row
+prop.table(con_tab, margin = 1)
+
+
+# Recall we made a contingency_table matrix
+contingency_table
+# Create a, b, c, d variables for calculations
+a <- contingency_table[1]
+c <- contingency_table[2]
+b <- contingency_table[3]
+d <- contingency_table[4]
+
+
+# Calculate probabilities
+# P(Presence | Group 1)
+p1 <- a / (a + c)
+print(p1)
+# P(Presence | Group 2)
+p2 <- b / (b + d)
+print(p2)
+# P(Absence | Group 1)
+a1 <- c / (a + c)
+print(a1)
+# P(Absence | Group 2)
+a2 <- d / (b + d)
+print(a2)
+
+```
+
+**2. Compute the risk ratio and the odds ratio. How do these compare?**
+
+```{r}
+# Calculate the Risk Ratio
+rr <- p1 / p2
+print(+rr)
+
+# Calculate Odds Ratio
+or <- (p1 / a1) / (p2 / a2)
+print(or)
+```
+Risk Ratio is 2. So, exposed are 2 times as likely to develop disase than unexposed.
+
+Odd ratio is 2.06383. So, disease in exposed are 2.06383 times higher than unexposed. 
+
+Both are shows relatives between exposure. However Odd Ratio has slightly higher ratio.
+
+
+**3. In your own words, describe the difference between a risk and a rate.**
+
+Risk is the probability of a case happening during a specific time. It needs to define population, specified time, and number of new cases. Rate is the frequency of new cases of an event occurring in the population.
+
+
+**Read the classic paper Perception of Risk by Paul Slovic (This is available on Blackboard) and answer the following questions.**
+
+**4. How does Paul Slovic's research challenge the traditional models of risk assessment, particularly in the context of how individuals perceive and react to different risks?**
+
+According to Paul Slovic's research, people's risk assessment models depend not only on statistical possibilities and objective data. Instead of those factors; social, psychological, and emotional factors play a role. Professionals relayed risk based on statistics, but the general public judges risk associated with feelings of fear, unfamiliarity, and catastrophic potential. This situation creates challenges between public concerns and professional risk evaluation on traditional models.
+
+**5. In what ways do affective and emotional factors influence the perception of risk according to Slovic's findings, and how might this affect public policy or communication strategies?**
+
+The ways of emotional effectiveness factors are factors such as fear and terror. These factors affect people strongly. This can be due to exaggerated dangers even when the risk is low. This can have an impact on public policy or communication strategies. For effective public policy, these factors should also be taken into account during communication and risk assessment.
+
+**6. Discuss the concept of the 'psychometric paradigm' introduced by Slovic. How does this framework help in understanding the differences in risk perception between laypeople and experts?**
+
+The psychometric paradigm clarifies people’s perception of risk and its factors such as controllability, familiarity, and catastrophic potential. This framework helps focus on both qualitative and quantitative aspects as it creates a link between statistical and public concern risk analysis.
+
